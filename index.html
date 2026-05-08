@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Quick! PedsVax</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: system-ui, sans-serif;
+  background: #f8f7f4;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.wrap {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Title */
+.main-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #111;
+  text-align: center;
+}
+
+/* Progress */
+.progress-wrap { width: 100%; display: flex; align-items: center; gap: 10px; }
+.prog-bar { flex: 1; height: 5px; background: #e0ddd6; border-radius: 3px; overflow: hidden; }
+.prog-fill { height: 100%; background: #1D9E75; border-radius: 3px; transition: width 0.4s ease; }
+.prog-lbl { font-size: 12px; color: #aaa; font-weight: 600; min-width: 36px; text-align: right; }
+
+/* Age card — smaller, compact */
+.age-card {
+  width: 100%;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e0ddd6;
+  padding: 1.1rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  position: relative;
+  overflow: hidden;
+  min-height: 90px;
+}
+canvas { position: absolute; inset: 0; pointer-events: none; border-radius: 16px; }
+
+.age-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #aaa;
+}
+.age-display {
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: #111;
+  line-height: 1;
+}
+.feedback-msg {
+  font-size: 13px;
+  font-weight: 600;
+  color: #aaa;
+  min-height: 18px;
+  transition: color 0.2s;
+}
+.feedback-msg.ok  { color: #1D9E75; }
+.feedback-msg.err { color: #e24b4a; }
+
+/* Vaccine grid — 3 columns */
+.vax-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+.vbtn {
+  padding: 11px 6px;
+  border-radius: 12px;
+  border: 1.5px solid #ddd;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+  text-align: center;
+  line-height: 1.2;
+  transition: background 0.12s, border-color 0.12s, transform 0.1s, box-shadow 0.12s;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.vbtn:hover:not(:disabled) {
+  border-color: #aaa;
+  transform: translateY(-1px);
+}
+
+.vbtn.selected {
+  background: #111;
+  border-color: #111;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
+
+.vbtn.confirmed {
+  background: #e1f5ee;
+  border-color: #1D9E75;
+  color: #0F6E56;
+  pointer-events: none;
+}
+
+.vbtn.wrong-hl {
+  background: #fcebeb;
+  border-color: #e24b4a;
+  color: #a32d2d;
+  pointer-events: none;
+  animation: shk 0.4s ease;
+}
+
+.vbtn:disabled { cursor: default; }
+
+@keyframes shk {
+  0%,100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+/* Action buttons row */
+.action-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.clear-btn {
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1.5px solid #ddd;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  color: #888;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.clear-btn:hover { background: #f8f7f4; border-color: #bbb; }
+
+.submit-btn {
+  flex: 1;
+  padding: 13px;
+  border-radius: 12px;
+  border: none;
+  background: #111;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.submit-btn:hover { background: #333; transform: translateY(-1px); }
+.submit-btn:active { transform: translateY(0); }
+
+/* Score */
+.score { font-size: 13px; color: #999; }
+.score b { color: #555; }
+
+/* ---- Results ---- */
+.results-card {
+  width: 100%;
+  background: #fff;
+  border-radius: 20px;
+  border: 1px solid #e0ddd6;
+  padding: 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+.results-card h2 { font-size: 1.5rem; font-weight: 700; color: #111; }
+.stat-row { width: 100%; display: flex; gap: 10px; }
+.stat-box { flex: 1; background: #f8f7f4; border-radius: 14px; padding: 1rem; text-align: center; }
+.stat-box .num { font-size: 2rem; font-weight: 800; color: #111; line-height: 1; margin-bottom: 4px; }
+.stat-box .lbl { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #aaa; }
+.stat-box.green .num { color: #1D9E75; }
+.stat-box.red .num { color: #e24b4a; }
+.accuracy-bar-wrap { width: 100%; }
+.accuracy-bar-bg { width: 100%; height: 8px; background: #f0ede8; border-radius: 4px; overflow: hidden; }
+.accuracy-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+.accuracy-lbl { display: flex; justify-content: space-between; font-size: 12px; color: #aaa; margin-bottom: 6px; font-weight: 600; }
+.remark { font-size: 14px; color: #555; text-align: center; font-weight: 500; }
+.replay-btn { width: 100%; padding: 13px; background: #111; color: #fff; border: none; border-radius: 14px; font-size: 15px; font-weight: 600; cursor: pointer; }
+.replay-btn:hover { background: #333; }
+</style>
+</head>
+<body>
+
+<!-- QUIZ VIEW -->
+<div class="wrap" id="quizView">
+  <div class="main-title">Quick! PedsVax</div>
+
+  <div class="progress-wrap">
+    <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+    <div class="prog-lbl" id="progLbl">0 / 10</div>
+  </div>
+
+  <div class="age-card" id="ageCard">
+    <canvas id="cv"></canvas>
+    <div class="age-label">Which vaccines at…</div>
+    <div class="age-display" id="ageDisplay">—</div>
+    <div class="feedback-msg" id="feedbackMsg"></div>
+  </div>
+
+  <div class="vax-grid" id="vaxGrid"></div>
+
+  <div class="action-row">
+    <button class="clear-btn" id="clearBtn" onclick="clearSelection()">Clear</button>
+    <button class="submit-btn" id="submitBtn" onclick="handleSubmit()">Submit</button>
+  </div>
+
+  <div class="score">Correct: <b id="sc">0</b> &nbsp;/&nbsp; Attempts: <b id="at">0</b></div>
+</div>
+
+<!-- RESULTS VIEW -->
+<div class="wrap" id="resultsView" style="display:none;">
+  <div class="results-card">
+    <div style="font-size:2rem;">💉</div>
+    <h2>Round Complete!</h2>
+    <div class="stat-row">
+      <div class="stat-box green">
+        <div class="num" id="rCorrect">—</div>
+        <div class="lbl">First-try correct</div>
+      </div>
+      <div class="stat-box red">
+        <div class="num" id="rMissed">—</div>
+        <div class="lbl">Needed retries</div>
+      </div>
+      <div class="stat-box">
+        <div class="num" id="rAttempts">—</div>
+        <div class="lbl">Total attempts</div>
+      </div>
+    </div>
+    <div class="accuracy-bar-wrap">
+      <div class="accuracy-lbl"><span>Accuracy</span><span id="rPct">—</span></div>
+      <div class="accuracy-bar-bg"><div class="accuracy-bar-fill" id="rBar" style="width:0%;"></div></div>
+    </div>
+    <div class="remark" id="rRemark">—</div>
+    <button class="replay-btn" onclick="restart()">Play Again</button>
+  </div>
+</div>
+
+<script>
+var VACCINES = ['DTaP','Tdap','IPV','Hib','PCV','Rotavirus','MMR','Varicella','Hep A','Hep B','HPV','Meningococcal'];
+
+var SCHEDULE = {
+  'Birth':    ['Hep B'],
+  '2 months': ['Hep B','DTaP','IPV','Hib','PCV','Rotavirus'],
+  '4 months': ['DTaP','IPV','Hib','PCV','Rotavirus'],
+  '6 months': ['Hep B','DTaP','IPV','Hib','PCV','Rotavirus'],
+  '12 months':['MMR','Varicella','Hep A','Hib','PCV'],
+  '15 months':['DTaP'],
+  '18 months':['Hep A'],
+  '4 years':  ['DTaP','IPV','MMR','Varicella'],
+  '11 years': ['Tdap','HPV','Meningococcal'],
+  '16 years': ['Meningococcal']
+};
+
+var deck=[], idx=0, sc=0, at=0, firstTryCorrect=0;
+var currentWasWrong=false;
+var particles=[], raf=null;
+
+function shuffle(arr) {
+  var a=arr.slice();
+  for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}
+  return a;
+}
+
+function init() {
+  deck = shuffle(Object.keys(SCHEDULE));
+  idx=0; sc=0; at=0; firstTryCorrect=0; currentWasWrong=false;
+  buildGrid();
+  loadQuestion();
+  updateScore();
+  document.getElementById('quizView').style.display='flex';
+  document.getElementById('resultsView').style.display='none';
+}
+
+function buildGrid() {
+  var grid=document.getElementById('vaxGrid');
+  grid.innerHTML='';
+  VACCINES.forEach(function(v){
+    var btn=document.createElement('button');
+    btn.className='vbtn';
+    btn.id='vbtn-'+v.replace(/\s/g,'');
+    btn.textContent=v;
+    btn.onclick=function(){ toggleVax(v, btn); };
+    grid.appendChild(btn);
+  });
+}
+
+function getBtnId(v){ return 'vbtn-'+v.replace(/\s/g,''); }
+
+function toggleVax(v, btn) {
+  // Can't toggle confirmed (green) or wrong-locked (red)
+  if(btn.classList.contains('confirmed') || btn.classList.contains('wrong-hl')) return;
+  btn.classList.toggle('selected');
+}
+
+function clearSelection() {
+  VACCINES.forEach(function(v){
+    var btn=document.getElementById(getBtnId(v));
+    btn.className='vbtn';
+  });
+  setFeedback('','');
+}
+
+function loadQuestion() {
+  currentWasWrong=false;
+  clearSelection();
+  setFeedback('','');
+  document.getElementById('ageDisplay').textContent = deck[idx];
+  updateProgress();
+}
+
+function updateProgress() {
+  var pct=Math.round((idx/10)*100);
+  document.getElementById('progFill').style.width=pct+'%';
+  document.getElementById('progLbl').textContent=idx+' / 10';
+}
+
+function updateScore() {
+  document.getElementById('sc').textContent=sc;
+  document.getElementById('at').textContent=at;
+}
+
+// Returns vaccines in a given state
+function getByState(state) {
+  return VACCINES.filter(function(v){
+    return document.getElementById(getBtnId(v)).classList.contains(state);
+  });
+}
+
+function setFeedback(msg, type) {
+  var el=document.getElementById('feedbackMsg');
+  el.textContent=msg;
+  el.className='feedback-msg'+(type?' '+type:'');
+}
+
+function handleSubmit() {
+  var correct = SCHEDULE[deck[idx]];
+
+  // Build full current selection: confirmed greens + currently selected
+  var confirmed = getByState('confirmed');
+  var selected  = getByState('selected');
+  var fullSelection = confirmed.concat(selected);
+
+  at++;
+  updateScore();
+
+  var fullSet = fullSelection.slice().sort().join(',');
+  var corSet  = correct.slice().sort().join(',');
+
+  if(fullSet === corSet) {
+    // ✓ Correct
+    if(!currentWasWrong){ firstTryCorrect++; sc++; }
+    else { sc++; }
+
+    // Show all correct as green, rest plain
+    VACCINES.forEach(function(v){
+      var btn=document.getElementById(getBtnId(v));
+      btn.className = correct.indexOf(v)>-1 ? 'vbtn confirmed' : 'vbtn';
+    });
+    setFeedback('Correct! ✓','ok');
+    confetti();
+    setTimeout(function(){
+      stopConfetti();
+      idx++;
+      if(idx>=10){ showResults(); }
+      else { loadQuestion(); }
+    },1500);
+
+  } else {
+    // ✗ Incorrect
+    currentWasWrong=true;
+
+    // Wrong = selected but not in correct answer
+    var wrong = selected.filter(function(v){ return correct.indexOf(v)<0; });
+    // Right among newly selected = selected AND in correct answer
+    var newlyRight = selected.filter(function(v){ return correct.indexOf(v)>-1; });
+
+    // Lock in newly correct as green
+    newlyRight.forEach(function(v){
+      document.getElementById(getBtnId(v)).className='vbtn confirmed';
+    });
+
+    // Mark wrong as red (locked, shake via CSS)
+    wrong.forEach(function(v){
+      document.getElementById(getBtnId(v)).className='vbtn wrong-hl';
+    });
+
+    var msg = wrong.length>0 ? 'Red = wrong selection' : 'Not quite — keep going';
+    setFeedback(msg,'err');
+  }
+}
+
+function showResults() {
+  stopConfetti();
+  var missed=10-firstTryCorrect;
+  var pct=Math.round((firstTryCorrect/10)*100);
+  var barColor=pct===100?'#1D9E75':pct>=75?'#378ADD':pct>=50?'#EF9F27':'#e24b4a';
+  var remarks=[
+    [100,'Perfect — every age, every vaccine!'],
+    [83, 'Really strong — just a couple of slip-ups.'],
+    [67, 'Solid round. A few schedules to review.'],
+    [50, 'Getting there — keep drilling those tricky ages.'],
+    [0,  'Lots to learn — another round will help!']
+  ];
+  var remark=remarks[remarks.length-1][1];
+  for(var i=0;i<remarks.length;i++){if(pct>=remarks[i][0]){remark=remarks[i][1];break;}}
+
+  document.getElementById('rCorrect').textContent=firstTryCorrect;
+  document.getElementById('rMissed').textContent=missed;
+  document.getElementById('rAttempts').textContent=at;
+  document.getElementById('rPct').textContent=pct+'%';
+  document.getElementById('rBar').style.width=pct+'%';
+  document.getElementById('rBar').style.background=barColor;
+  document.getElementById('rRemark').textContent=remark;
+
+  document.getElementById('quizView').style.display='none';
+  document.getElementById('resultsView').style.display='flex';
+}
+
+function restart(){ init(); }
+
+// Confetti
+function confetti(){
+  var cv=document.getElementById('cv'),card=document.getElementById('ageCard');
+  cv.width=card.offsetWidth; cv.height=card.offsetHeight;
+  var ctx=cv.getContext('2d');
+  var cols=['#1D9E75','#5DCAA5','#378ADD','#D4537E','#EF9F27','#7F77DD'];
+  particles=[];
+  for(var i=0;i<70;i++) particles.push({
+    x:Math.random()*cv.width, y:-10-Math.random()*30,
+    w:6+Math.random()*6, h:7+Math.random()*5,
+    c:cols[Math.floor(Math.random()*cols.length)],
+    vx:(Math.random()-0.5)*4, vy:2+Math.random()*3,
+    a:Math.random()*Math.PI*2, spin:(Math.random()-0.5)*0.18, alpha:1
+  });
+  if(raf)cancelAnimationFrame(raf);
+  function draw(){
+    ctx.clearRect(0,0,cv.width,cv.height); var any=false;
+    particles.forEach(function(p){
+      p.x+=p.vx; p.y+=p.vy; p.a+=p.spin; p.alpha-=0.02;
+      if(p.alpha>0){
+        any=true; ctx.save(); ctx.globalAlpha=p.alpha;
+        ctx.translate(p.x,p.y); ctx.rotate(p.a);
+        ctx.fillStyle=p.c; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+        ctx.restore();
+      }
+    });
+    if(any) raf=requestAnimationFrame(draw);
+    else ctx.clearRect(0,0,cv.width,cv.height);
+  }
+  draw();
+}
+function stopConfetti(){
+  if(raf){cancelAnimationFrame(raf);raf=null;}
+  var cv=document.getElementById('cv');
+  if(cv) cv.getContext('2d').clearRect(0,0,cv.width,cv.height);
+}
+
+init();
+</script>
+</body>
+</html>
