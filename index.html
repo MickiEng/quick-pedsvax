@@ -178,8 +178,14 @@ canvas { position: absolute; inset: 0; pointer-events: none; border-radius: 16px
 .submit-btn:active { transform: translateY(0); }
 
 /* Score */
-.score { font-size: 13px; color: #999; }
+.score-row { display: flex; align-items: center; width: 100%; }
+.score-spacer { flex: 1; text-align: right; }
+.score { font-size: 13px; color: #999; text-align: center; }
 .score b { color: #555; }
+.note-toggle { font-size: 13px; color: #4a90d9; background: none; border: none; cursor: pointer; padding: 0; font-weight: 600; }
+.note-toggle:hover { color: #2568b0; }
+.note-panel { display: none; font-size: 12px; color: #888; background: #f7f5f2; border-radius: 6px; padding: 0.55rem 0.75rem; margin-top: 0.35rem; line-height: 1.5; }
+.note-panel.open { display: block; }
 
 .logo-footer { margin-top: 0.5rem; }
 .logo-footer img { height: 36px; width: auto; display: block; }
@@ -237,7 +243,12 @@ canvas { position: absolute; inset: 0; pointer-events: none; border-radius: 16px
     <button class="submit-btn" id="submitBtn" onclick="handleSubmit()">Submit</button>
   </div>
 
-  <div class="score">Correct: <b id="sc">0</b> &nbsp;/&nbsp; Attempts: <b id="at">0</b></div>
+  <div class="score-row">
+    <div class="score-spacer"></div>
+    <div class="score">Correct: <b id="sc">0</b> &nbsp;/&nbsp; Attempts: <b id="at">0</b></div>
+    <div class="score-spacer"><button class="note-toggle" onclick="toggleNote()" id="noteBtn">Note ▾</button></div>
+  </div>
+  <div class="note-panel" id="notePanel">For training simplicity, this app focuses strictly on core childhood series; Influenza, COVID-19, and Rotavirus are not featured. Correct answers default to the earliest routine well-child visit.</div>
   <div class="logo-footer"><img src="beal_logo_blue_sm.webp" alt="Beal logo"></div>
 </div>
 
@@ -270,6 +281,13 @@ canvas { position: absolute; inset: 0; pointer-events: none; border-radius: 16px
 </div>
 
 <script>
+function toggleNote() {
+  var panel = document.getElementById('notePanel');
+  var btn = document.getElementById('noteBtn');
+  var open = panel.classList.toggle('open');
+  btn.textContent = open ? 'Note ▴' : 'Note ▾';
+}
+
 var VACCINES = ['DTaP','Tdap','IPV','Hib','PCV','Rotavirus','MMR','Varicella','Hep A','Hep B','HPV','Meningococcal'];
 
 var SCHEDULE = {
